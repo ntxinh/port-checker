@@ -118,7 +118,7 @@ func TestScanLive(t *testing.T) {
 	if err != nil {
 		t.Skip()
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 	got, err := Scan()
 	if err != nil {
 		t.Fatal(err)
