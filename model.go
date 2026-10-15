@@ -65,6 +65,7 @@ func newModel() model {
 				{Title: "PID", Width: 8},
 				{Title: "PROCESS", Width: 20},
 				{Title: "STATE", Width: 12},
+				{Title: "CMDLINE", Width: 40},
 			}),
 			table.WithFocused(true),
 			table.WithHeight(10),
@@ -249,7 +250,7 @@ func (m *model) setRows() {
 		if e.PID > 0 {
 			pid = strconv.Itoa(e.PID)
 		}
-		rows[i] = table.Row{e.Proto, e.Local, strconv.Itoa(e.Port), pid, e.Process, e.State}
+		rows[i] = table.Row{e.Proto, e.Local, strconv.Itoa(e.Port), pid, e.Process, e.State, e.Cmdline}
 	}
 	m.table.SetRows(rows)
 	if m.table.Cursor() < 0 && len(rows) > 0 {
