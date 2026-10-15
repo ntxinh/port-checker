@@ -136,13 +136,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if k, ok := msg.(tea.KeyMsg); ok && k.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
+
 	if m.confirming {
 		k := msg.(tea.KeyMsg)
 		switch k.String() {
 		case "y":
 			m.confirming = false
 			return m, killCmd(m.confirmPID, int(syscall.SIGTERM))
-		case "n", "esc":
+		case "n", "q", "esc":
 			m.confirming = false
 		}
 		return m, nil
@@ -248,6 +252,9 @@ func (m *model) setRows() {
 		rows[i] = table.Row{e.Proto, e.Local, strconv.Itoa(e.Port), pid, e.Process, e.State}
 	}
 	m.table.SetRows(rows)
+	if m.table.Cursor() < 0 && len(rows) > 0 {
+		m.table.SetCursor(0)
+	}
 }
 
 // forceKillHint reports whether the last SIGTERMd pid is still alive in the list.

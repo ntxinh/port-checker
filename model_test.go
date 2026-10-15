@@ -114,3 +114,69 @@ func TestKillResultESRCHSilent(t *testing.T) {
 		t.Fatal("expected rescan cmd")
 	}
 }
+
+func TestCursorRecoveryAfterEmptyFilter(t *testing.T) {
+	m := newModel()
+	m.w, m.h = 100, 30
+	m.entries = []PortEntry{{Proto: "tcp", Port: 8080, Local: "127.0.0.1:8080", PID: 4321, Process: "fake", State: "LISTEN"}}
+	m.setRows()
+
+	// filter drains rows to 0 → cursor goes to -1
+	m.filterText = "zzz"
+	m.setRows()
+	if len(m.table.Rows()) != 0 {
+		t.Fatal("expected empty table")
+	}
+
+	// clearing the filter refills rows; cursor must recover
+	m.filterText = ""
+	m.setRows()
+	if m.table.Cursor() != 0 {
+		t.Fatalf("cursor=%d", m.table.Cursor())
+	}
+
+	// x on the recovered row opens the confirm modal
+	um, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	m = um.(model)
+	if !m.confirming {
+		t.Fatal("x did not open confirm modal after cursor recovery")
+	}
+}
+
+func TestCtrlCQuitsEverywhere(t *testing.T) {
+	ctrlC := tea.KeyMsg{Type: tea.KeyCtrlC}
+
+	// base state
+	m := newModel()
+	if _, cmd := m.Update(ctrlC); cmd == nil {
+		t.Fatal("ctrl+c in base state: no cmd")
+	}
+
+	// confirming state
+	m = newModel()
+	m.confirming = true
+	m.confirmPID = 4321
+	if _, cmd := m.Update(ctrlC); cmd == nil {
+		t.Fatal("ctrl+c in confirming state: no cmd")
+	}
+
+	// filtering state
+	m = newModel()
+	m.filtering = true
+	if _, cmd := m.Update(ctrlC); cmd == nil {
+		t.Fatal("ctrl+c in filtering state: no cmd")
+	}
+
+	// q cancels the confirm modal (does not quit)
+	m = newModel()
+	m.confirming = true
+	m.confirmPID = 4321
+	um, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	m = um.(model)
+	if m.confirming {
+		t.Fatal("q did not cancel confirm modal")
+	}
+	if cmd != nil {
+		t.Fatal("q in confirm returned a cmd")
+	}
+}
